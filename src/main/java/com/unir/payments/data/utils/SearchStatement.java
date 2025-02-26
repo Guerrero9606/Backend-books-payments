@@ -1,4 +1,4 @@
-package com.unir.products.data.utils;
+package com.unir.payments.data.utils;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

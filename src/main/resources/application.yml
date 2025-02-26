@@ -1,7 +1,7 @@
 ## Configuracion de Spring
 spring:
   application:
-    name: ms-inventory-products
+    name: ms-books-payments
   datasource:
     url: jdbc:h2:mem:testdb;Mode=MySQL
   jpa:
@@ -18,7 +18,7 @@ spring:
 
 ## Configuracion de Instancia 
 server:
-  port: 8088
+  port: 8089
 
 ## Configuracion del cliente de Eureka
 eureka:
@@ -27,4 +27,4 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
     preferIpAddress: true
-    hostname: ms-inventory-products
+    hostname: ms-books-payments

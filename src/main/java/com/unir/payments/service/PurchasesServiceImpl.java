@@ -12,10 +12,15 @@ import com.unir.payments.data.PurchaseRepository;
 import com.unir.payments.controller.model.PurchaseDto;
 import com.unir.payments.controller.model.CreatePurchaseRequest;
 import com.unir.payments.data.model.Purchase;
+import com.unir.payments.controller.model.BookResponseDTO; // Modelo para mapear la respuesta del microservicio de libros
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
@@ -27,11 +32,19 @@ public class PurchasesServiceImpl implements PurchasesService {
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	// Para llamar al microservicio de libros vía Gateway
+	@Autowired
+	private RestTemplate restTemplate;
+
+	// Inyectamos la URL del Gateway (definida en las propiedades o variables de entorno)
+	@Value("${gateway.url:http://localhost:8762}")
+	private String gatewayUrl;
+
 	@Override
-	public List<Purchase> getPurchases(String bookIsbn, String buyer, String status) {
+	public List<Purchase> getPurchases(String bookId, String buyer, String status) {
 		// Si se proporciona algún criterio de búsqueda, se utiliza el método search
-		if (StringUtils.hasLength(bookIsbn) || StringUtils.hasLength(buyer) || StringUtils.hasLength(status)) {
-			return repository.search(bookIsbn, buyer, status);
+		if (StringUtils.hasLength(bookId) || StringUtils.hasLength(buyer) || StringUtils.hasLength(status)) {
+			return repository.search(bookId, buyer, status);
 		}
 		List<Purchase> purchases = repository.getPurchases();
 		return purchases.isEmpty() ? null : purchases;
@@ -56,20 +69,57 @@ public class PurchasesServiceImpl implements PurchasesService {
 	@Override
 	public Purchase createPurchase(CreatePurchaseRequest request) {
 		if (request != null
-				&& StringUtils.hasLength(request.getBookIsbn().trim())
+				&& StringUtils.hasLength(request.getBookId().trim())
 				&& request.getQuantity() != null
 				&& StringUtils.hasLength(request.getBuyer().trim())
 				&& StringUtils.hasLength(request.getStatus().trim())) {
 
+			String bookId = request.getBookId();
+			// Construir la URL del Gateway para consultar el libro (se usa el ID o ISBN, según cómo esté configurado)
+			String bookUrl = gatewayUrl + "/ms-books-catalogue/books/" + bookId;
+			String getPayload = "{\"targetMethod\": \"GET\"}";
+
+			log.info("Consultando disponibilidad del libro en: {}", bookUrl);
+			ResponseEntity<BookResponseDTO> bookResponse = restTemplate.postForEntity(bookUrl, getPayload, BookResponseDTO.class);
+
+			boolean available = false;
+			if (bookResponse.getStatusCode() == HttpStatus.OK && bookResponse.getBody() != null) {
+				BookResponseDTO book = bookResponse.getBody();
+				available = Boolean.TRUE.equals(book.getVisible());
+				log.info("Libro consultado: ID={}, visible={}", book.getBookId(), available);
+			} else {
+				log.warn("No se encontró el libro con ID: {}", bookId);
+			}
+
+			// Construir el objeto Purchase
 			Purchase purchase = Purchase.builder()
-					.bookIsbn(request.getBookIsbn())
+					.bookId(bookId)
 					.purchaseDate(request.getPurchaseDate() != null ? request.getPurchaseDate() : LocalDateTime.now())
 					.quantity(request.getQuantity())
 					.buyer(request.getBuyer())
-					.status(request.getStatus())
 					.build();
 
-			return repository.save(purchase);
+			if (available) {
+				purchase.setStatus("CONFIRMED");
+				Purchase savedPurchase = repository.save(purchase);
+
+				// Actualizar el libro: enviar solicitud para cambiar 'visible' a false.
+				String updatePayload = "{\"targetMethod\": \"PATCH\", \"queryParams\": {}, \"body\": {\"visible\": false}}";
+				log.info("Actualizando visibilidad del libro a false en: {}", bookUrl);
+				try {
+					restTemplate.postForEntity(bookUrl, updatePayload, Void.class);
+				} catch (Exception e) {
+					log.error("Error al actualizar visibilidad del libro: {}", e.getMessage(), e);
+					// Aquí puedes decidir si revertir la compra o notificar el error.
+				}
+				return savedPurchase;
+			} else {
+				// Libro no disponible: registra la compra con status CANCELLED
+				purchase.setStatus("CANCELLED");
+				Purchase savedPurchase = repository.save(purchase);
+				log.info("Compra registrada con status CANCELLED, libro no disponible.");
+				return savedPurchase;
+			}
 		} else {
 			return null;
 		}
@@ -98,7 +148,6 @@ public class PurchasesServiceImpl implements PurchasesService {
 	public Purchase updatePurchase(String purchaseId, PurchaseDto updateRequest) {
 		Purchase purchase = repository.getById(Long.valueOf(purchaseId));
 		if (purchase != null) {
-			// Se asume que la entidad Purchase tiene un método update(PurchaseDto purchaseDto)
 			purchase.update(updateRequest);
 			repository.save(purchase);
 			return purchase;

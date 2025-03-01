@@ -7,11 +7,11 @@ import com.unir.payments.data.model.Purchase;
 
 public interface PurchaseJpaRepository extends JpaRepository<Purchase, Long>, JpaSpecificationExecutor<Purchase> {
 
-	List<Purchase> findByBookIsbn(String bookIsbn);
+	List<Purchase> findByBookId(String bookId);
 
 	List<Purchase> findByBuyer(String buyer);
 
 	List<Purchase> findByStatus(String status);
 
-	List<Purchase> findByBookIsbnAndBuyer(String bookIsbn, String buyer);
+	List<Purchase> findByBookIdAndBuyer(String bookId, String buyer);
 }

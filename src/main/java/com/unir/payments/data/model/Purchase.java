@@ -33,8 +33,8 @@ public class Purchase {
 	private Long id;
 
 	// ISBN del libro adquirido
-	@Column(name = Consts.BOOK_ISBN, nullable = false)
-	private String bookIsbn;
+	@Column(name = Consts.BOOK_ID, nullable = false)
+	private String bookId;
 
 	// Fecha y hora de la compra
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -55,7 +55,7 @@ public class Purchase {
 
 	// Método para actualizar la entidad a partir de un PurchaseDto
 	public void update(PurchaseDto purchaseDto) {
-		this.bookIsbn = purchaseDto.getBookIsbn();
+		this.bookId = purchaseDto.getBookId();
 		this.purchaseDate = purchaseDto.getPurchaseDate();
 		this.quantity = purchaseDto.getQuantity();
 		this.buyer = purchaseDto.getBuyer();

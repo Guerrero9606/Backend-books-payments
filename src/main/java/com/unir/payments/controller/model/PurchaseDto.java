@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class PurchaseDto {
 	private Long id;
-	private String bookIsbn;
+	private String bookId;
 	private LocalDateTime purchaseDate;
 	private Integer quantity;
 	private String buyer;

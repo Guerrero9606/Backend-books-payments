@@ -33,11 +33,11 @@ public class PurchaseRepository {
         repository.delete(purchase);
     }
 
-    public List<Purchase> search(String bookIsbn, String buyer, String status) {
+    public List<Purchase> search(String bookId, String buyer, String status) {
         SearchCriteria<Purchase> spec = new SearchCriteria<>();
 
-        if (StringUtils.isNotBlank(bookIsbn)) {
-            spec.add(new SearchStatement(Consts.BOOK_ISBN, bookIsbn, SearchOperation.MATCH));
+        if (StringUtils.isNotBlank(bookId)) {
+            spec.add(new SearchStatement(Consts.BOOK_ID, bookId, SearchOperation.MATCH));
         }
 
         if (StringUtils.isNotBlank(buyer)) {

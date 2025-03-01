@@ -1,5 +1,6 @@
 package com.unir.payments.controller.model;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class CreatePurchaseRequest {
 	// ISBN del libro a comprar (para validación con ms-books-catalogue)
-	private String bookIsbn;
+	private String bookId;
 
 	// Cantidad de libros a adquirir
 	private Integer quantity;
@@ -22,4 +23,5 @@ public class CreatePurchaseRequest {
 
 	// Opcional: en caso de que el cliente envíe la fecha de compra; si no, se asignará automáticamente
 	private LocalDateTime purchaseDate;
+
 }
